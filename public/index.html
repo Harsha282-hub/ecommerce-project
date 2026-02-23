@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>E-Commerce</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+
+  <h2>🛒 My Store</h2>
+
+  <input 
+    type="text" 
+    id="search"
+    placeholder="Search products..."
+    onkeyup="searchProducts()"
+  />
+
+  <div>
+    <span id="userEmail"></span>
+
+    <button id="adminBtn" onclick="goToAdmin()" style="display:none;">
+      Admin
+    </button>
+
+    <button onclick="goToCart()">Cart</button>
+    <button onclick="window.location.href='/contact.html'">Contact</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+</header>
+
+<div id="products" class="loading">Loading products...</div>
+
+<script>
+
+let allProducts = [];
+let ratings = [];
+
+/* 🔐 TOKEN CHECK */
+
+const token = localStorage.getItem("token");
+
+if(!token) window.location.href="/login.html";
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+
+document.getElementById("userEmail").innerText = payload.email;
+
+/* 👑 SHOW ADMIN BUTTON */
+
+if(payload.role === "admin"){
+  document.getElementById("adminBtn").style.display = "inline-block";
+}
+
+/* 📦 FETCH PRODUCTS */
+
+Promise.all([
+  fetch("/products")
+  .then(res => {
+    console.log(res);
+    return res.json();
+  }),
+  fetch("/ratings").then(res => res.json())
+])
+.then(([productsData, ratingsData]) => {
+
+  allProducts = productsData;
+  ratings = ratingsData;
+
+  renderProducts(allProducts);
+
+});
+
+/* ⭐ GET RATING */
+
+function getRating(productId){
+
+  const found = ratings.find(r => r.product_id == productId);
+
+  if(!found) return "⭐ No ratings";
+
+  return "⭐ " + Number(found.avgRating).toFixed(1);
+}
+
+/* 🖼 RENDER PRODUCTS */
+
+function renderProducts(list){
+
+  const container = document.getElementById("products");
+
+  if(list.length === 0){
+    container.innerHTML = "<h2>No products found 😢</h2>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  list.forEach(product => {
+
+    container.innerHTML += `
+      <div class="card">
+
+        <img src="${product.image}">
+
+        <h3>${product.name}</h3>
+
+        <p>₹ ${product.price}</p>
+
+        <p>${getRating(product.id)}</p>
+
+        <p class="${product.stock > 0 ? "stock" : "out"}">
+          ${product.stock > 0 ? "✅ In Stock" : "❌ Out of Stock"}
+        </p>
+
+        <button 
+          onclick="addToCart(${product.id})"
+          ${product.stock == 0 ? "disabled" : ""}
+        >
+          Add to Cart
+        </button>
+
+      </div>
+    `;
+
+  });
+
+}
+
+/* 🔍 SEARCH */
+
+function searchProducts(){
+
+  const value = document.getElementById("search").value.toLowerCase();
+
+  const filtered = allProducts.filter(p =>
+    p.name.toLowerCase().includes(value)
+  );
+
+  renderProducts(filtered);
+}
+
+/* 🛒 ADD TO CART */
+
+function addToCart(id){
+
+  fetch("/add-to-cart",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + token
+    },
+    body:JSON.stringify({product_id:id})
+  })
+  .then(res => res.text())
+  .then(data => alert(data));
+
+}
+
+/* 🚪 LOGOUT */
+
+function logout(){
+  localStorage.removeItem("token");
+  window.location.href="/login.html";
+}
+
+/* 🛒 GO TO CART */
+
+function goToCart(){
+  window.location.href="/cart.html";
+}
+
+/* 👑 GO TO ADMIN */
+
+function goToAdmin(){
+  window.location.href="/admin.html";
+}
+
+</script>
+
+</body>
+</html>

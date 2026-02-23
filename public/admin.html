@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <h2>👑 Admin Dashboard</h2>
+  <button onclick="window.location.href='/'">Home</button>
+  <button onclick="logout()">Logout</button>
+</header>
+
+<div class="admin-container">
+
+  <h3>➕ Add Product</h3>
+
+  <input type="text" id="name" placeholder="Product Name">
+  <input type="number" id="price" placeholder="Price">
+  <input type="text" id="image" placeholder="Image URL">
+  <input type="number" id="stock" placeholder="Stock">
+
+  <button onclick="addProduct()">Add Product</button>
+
+</div>
+
+<div id="productList"></div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+if(!token){
+  alert("Login as admin");
+  window.location.href="/login.html";
+}
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+
+if(payload.role !== "admin"){
+  alert("Access denied");
+  window.location.href="/";
+}
+
+/* 🔄 LOAD PRODUCTS */
+function loadProducts(){
+
+fetch("/products")
+.then(res=>res.json())
+.then(data=>{
+
+  const container = document.getElementById("productList");
+  container.innerHTML = "";
+
+  data.forEach(p=>{
+
+    container.innerHTML += `
+      <div class="card">
+
+        <img src="${p.image}">
+        <h3>${p.name}</h3>
+        <p>₹ ${p.price}</p>
+
+        <input 
+          type="number" 
+          value="${p.stock}" 
+          onchange="updateStock(${p.id}, this.value)"
+        >
+
+        <br><br>
+
+        <button onclick="deleteProduct(${p.id})">
+          ❌ Delete
+        </button>
+
+      </div>
+    `;
+  });
+
+});
+
+}
+
+loadProducts();
+
+/* ➕ ADD PRODUCT */
+
+function addProduct(){
+
+const name = document.getElementById("name").value;
+const price = document.getElementById("price").value;
+const image = document.getElementById("image").value;
+const stock = document.getElementById("stock").value;
+
+if(!name || !price || !image || !stock){
+  alert("Fill all fields");
+  return;
+}
+
+fetch("/admin/add-product",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer " + token
+},
+body:JSON.stringify({name,price,image,stock})
+})
+.then(res=>res.text())
+.then(msg=>{
+alert(msg);
+loadProducts();
+});
+
+}
+
+/* ✏️ UPDATE STOCK */
+
+function updateStock(id,stock){
+
+fetch("/admin/update-stock",{
+method:"PUT",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer " + token
+},
+body:JSON.stringify({id,stock})
+})
+.then(res=>res.text())
+.then(msg=>console.log(msg));
+
+}
+
+/* ❌ DELETE PRODUCT */
+
+function deleteProduct(id){
+
+fetch("/admin/delete-product/"+id,{
+method:"DELETE",
+headers:{
+"Authorization":"Bearer " + token
+}
+})
+.then(res=>res.text())
+.then(msg=>{
+alert(msg);
+loadProducts();
+});
+
+}
+
+/* 🚪 LOGOUT */
+
+function logout(){
+localStorage.removeItem("token");
+window.location.href="/login.html";
+}
+
+</script>
+
+</body>
+</html>

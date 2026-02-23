@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Your Cart</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <h2>🛒 Your Cart</h2>
+  <button onclick="window.location.href='/'">Home</button>
+</header>
+
+<div id="cart"></div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+if(!token){
+  alert("Please login first");
+  window.location.href="/login.html";
+}
+
+/* 📦 LOAD CART */
+function loadCart(){
+
+fetch("/cart",{
+  headers:{
+    "Authorization":"Bearer " + token
+  }
+})
+.then(res => res.json())
+.then(data => renderCart(data));
+
+}
+
+loadCart();
+
+/* 🖼 RENDER CART */
+
+function renderCart(data){
+
+  const container = document.getElementById("cart");
+  container.innerHTML = "";
+
+  if(data.length === 0){
+    container.innerHTML = "<h2>Your cart is empty 😢</h2>";
+    return;
+  }
+
+  let total = 0;
+
+  data.forEach(item => {
+
+    total += item.price * item.quantity;
+
+    container.innerHTML += `
+      <div class="card">
+
+        <img src="${item.image}">
+        <h3>${item.name}</h3>
+
+        <p>₹ ${item.price}</p>
+
+        <p>
+          Qty:
+          <button onclick="updateQty(${item.id}, -1)">−</button>
+          ${item.quantity}
+          <button onclick="updateQty(${item.id}, 1)">+</button>
+        </p>
+
+        <button onclick="removeItem(${item.id})">Remove</button>
+
+        <br><br>
+
+        <button onclick="addReview(${item.id})">
+          ⭐ Add Review
+        </button>
+
+      </div>
+    `;
+
+  });
+
+  container.innerHTML += `<h2>Total: ₹ ${total}</h2>`;
+
+}
+
+/* ➕➖ UPDATE QUANTITY */
+
+function updateQty(id, change){
+
+fetch("/update-quantity",{
+method:"POST",
+headers:{
+  "Content-Type":"application/json",
+  "Authorization":"Bearer " + token
+},
+body:JSON.stringify({
+product_id:id,
+change:change
+})
+})
+.then(()=>loadCart());
+
+}
+
+/* ❌ REMOVE ITEM */
+
+function removeItem(id){
+
+fetch("/remove-from-cart",{
+method:"POST",
+headers:{
+  "Content-Type":"application/json",
+  "Authorization":"Bearer " + token
+},
+body:JSON.stringify({
+product_id:id
+})
+})
+.then(()=>loadCart());
+
+}
+
+/* ⭐ ADD REVIEW */
+
+function addReview(productId){
+
+const rating = prompt("Enter rating (1 to 5)");
+const comment = prompt("Write your review");
+
+fetch("/add-review",{
+method:"POST",
+headers:{
+  "Content-Type":"application/json",
+  "Authorization":"Bearer " + token
+},
+body:JSON.stringify({
+product_id:productId,
+rating:rating,
+comment:comment
+})
+})
+.then(res=>res.text())
+.then(msg=>{
+  alert(msg);
+});
+
+}
+
+</script>
+
+</body>
+</html>

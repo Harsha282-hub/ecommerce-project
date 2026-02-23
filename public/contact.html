@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Contact Us</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <h2>📩 Contact Us</h2>
+
+  <div>
+    <span id="userEmail"></span>
+    <button onclick="window.location.href='/'">Home</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="card" style="margin:40px auto; width:350px;">
+
+  <h3>Send us a message</h3>
+
+  <input 
+    type="text" 
+    id="email" 
+    disabled
+    style="width:90%; padding:8px; margin:10px 0;"
+  >
+
+  <textarea 
+    id="message" 
+    placeholder="Your Message"
+    style="width:90%; padding:8px; height:120px;"
+  ></textarea>
+
+  <br><br>
+
+  <button onclick="sendMessage()">Send</button>
+
+</div>
+
+<script>
+
+const token = localStorage.getItem("token");
+
+if(!token){
+  alert("Please login first");
+  window.location.href="/login.html";
+}
+
+/* 👤 GET USER FROM TOKEN */
+
+const payload = JSON.parse(atob(token.split(".")[1]));
+
+document.getElementById("email").value = payload.email;
+document.getElementById("userEmail").innerText = payload.email;
+
+/* 📩 SEND MESSAGE */
+
+function sendMessage(){
+
+  const message = document.getElementById("message").value.trim();
+
+  if(message === ""){
+    alert("Message cannot be empty");
+    return;
+  }
+
+  fetch("/contact",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer " + token
+    },
+    body:JSON.stringify({ message })
+  })
+  .then(res => res.text())
+  .then(data => {
+    alert("✅ Message sent successfully");
+    document.getElementById("message").value = "";
+  });
+
+}
+
+/* 🚪 LOGOUT */
+
+function logout(){
+  localStorage.removeItem("token");
+  window.location.href="/login.html";
+}
+
+</script>
+
+</body>
+</html>
